@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Chain": {
+      "type": "string",
+      "enum": ["ethereum", "base"]
+    },
+    "RiskTier": {
+      "type": "string",
+      "enum": ["extreme", "high", "medium", "low"]
+    },
+    "SignalSeverity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "info"]
+    },
+    "Signal": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string"},
+        "severity": {"$ref": "#/definitions/SignalSeverity"},
+        "description": {"type": "string"},
+        "evidenceLinks": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": ["title", "severity", "description", "evidenceLinks"]
+    },
+    "PrivilegeFlag": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "selector": {"type": "string"},
+        "riskLevel": {"type": "string"}
+      },
+      "required": ["name", "selector", "riskLevel"]
+    },
+    "ContractAnalysis": {
+      "type": "object",
+      "properties": {
+        "isProxy": {"type": "boolean"},
+        "verified": {"type": "boolean"},
+        "privilegeFlags": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/PrivilegeFlag"}
+        }
+      },
+      "required": ["isProxy", "verified", "privilegeFlags"]
+    },
+    "LiquidityAnalysis": {
+      "type": "object",
+      "properties": {
+        "liquidityUsd": {"type": ["number", "null"]},
+        "fdvUsd": {"type": ["number", "null"]},
+        "volume24hUsd": {"type": ["number", "null"]},
+        "pairUrl": {"type": ["string", "null"]},
+        "lowLiquidity": {"type": "boolean"},
+        "suspiciousRatio": {"type": "boolean"}
+      },
+      "required": ["liquidityUsd", "fdvUsd", "volume24hUsd", "pairUrl", "lowLiquidity", "suspiciousRatio"]
+    },
+    "HolderAnalysis": {
+      "type": "object",
+      "properties": {
+        "holdersUnavailable": {"type": "boolean"},
+        "top1Concentration": {"type": ["number", "null"]},
+        "top10Concentration": {"type": ["number", "null"]}
+      },
+      "required": ["holdersUnavailable", "top1Concentration", "top10Concentration"]
+    },
+    "AnalysisReport": {
+      "type": "object",
+      "properties": {
+        "chain": {"$ref": "#/definitions/Chain"},
+        "address": {"type": "string"},
+        "riskScore": {"type": "number", "minimum": 0, "maximum": 100},
+        "riskTier": {"$ref": "#/definitions/RiskTier"},
+        "signals": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/Signal"}
+        },
+        "contractAnalysis": {"$ref": "#/definitions/ContractAnalysis"},
+        "liquidityAnalysis": {"$ref": "#/definitions/LiquidityAnalysis"},
+        "holderAnalysis": {"$ref": "#/definitions/HolderAnalysis"},
+        "createdAt": {"type": "string", "format": "date-time"},
+        "updatedAt": {"type": "string", "format": "date-time"}
+      },
+      "required": ["chain", "address", "riskScore", "riskTier", "signals", "contractAnalysis", "liquidityAnalysis", "holderAnalysis", "createdAt", "updatedAt"]
+    },
+    "AnalyzeRequest": {
+      "type": "object",
+      "properties": {
+        "chain": {"$ref": "#/definitions/Chain"},
+        "address": {"type": "string", "pattern": "^0x[a-fA-F0-9]{40}$"}
+      },
+      "required": ["chain", "address"]
+    },
+    "AnalyzeResponse": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {"type": "string", "const": "completed"},
+            "report": {"$ref": "#/definitions/AnalysisReport"}
+          },
+          "required": ["status", "report"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {"type": "string", "const": "processing"},
+            "jobId": {"type": "string"}
+          },
+          "required": ["status", "jobId"]
+        }
+      ]
+    }
+  }
+}

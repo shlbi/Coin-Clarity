@@ -1,0 +1,12 @@
+{
+  "name": "@coin-clarity/shared",
+  "version": "1.0.0",
+  "description": "Shared types and schemas for Coin Clarity",
+  "main": "index.ts",
+  "scripts": {
+    "generate-types": "json2ts schema.json > types.ts"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "^14.0.0"
+  }
+}

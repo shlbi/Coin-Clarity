@@ -1,0 +1,38 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{js,ts,jsx,tsx}';
+
+@import 'tw-animate-css';
+
+/* CoinClarity Custom Theme */
+:root {
+  /* Override theme colors for CoinClarity */
+  --background: #F8FAFC;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --border: #E5E7EB;
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+  --secondary: #6B7280;
+  --muted-foreground: #6B7280;
+  
+  /* Risk colors */
+  --risk-low: #16A34A;
+  --risk-medium: #CA8A04;
+  --risk-high: #EA580C;
+  --risk-extreme: #DC2626;
+  
+  /* Spacing system (8px) */
+  --spacing-base: 8px;
+}
+
+@theme inline {
+  --color-risk-low: var(--risk-low);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-high: var(--risk-high);
+  --color-risk-extreme: var(--risk-extreme);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}

@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: coinclarity-postgres
+    environment:
+      POSTGRES_USER: coinclarity
+      POSTGRES_PASSWORD: coinclarity
+      POSTGRES_DB: coinclarity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinclarity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: coinclarity-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: coinclarity-api
+    environment:
+      DATABASE_URL: postgresql://coinclarity:coinclarity@postgres:5432/coinclarity
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_TTL_SECONDS: 21600
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:5173
+      ETH_RPC_URL: ${ETH_RPC_URL:-https://eth.llamarpc.com}
+      BASE_RPC_URL: ${BASE_RPC_URL:-https://base.llamarpc.com}
+      ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY:-}
+      BASESCAN_API_KEY: ${BASESCAN_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../apps/api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    container_name: coinclarity-worker
+    environment:
+      DATABASE_URL: postgresql://coinclarity:coinclarity@postgres:5432/coinclarity
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379/0
+      ETH_RPC_URL: ${ETH_RPC_URL:-https://eth.llamarpc.com}
+      BASE_RPC_URL: ${BASE_RPC_URL:-https://base.llamarpc.com}
+      ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY:-}
+      BASESCAN_API_KEY: ${BASESCAN_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../apps/api/app:/app/app
+      - ../apps/worker/worker.py:/app/worker.py
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: coinclarity-web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  postgres_data:
