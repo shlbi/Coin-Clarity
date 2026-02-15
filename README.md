@@ -1,98 +1,132 @@
 # Coin Clarity
 
-A production-ready MVP for analyzing crypto tokens to detect fraud and scam risk. Built with Next.js, FastAPI, PostgreSQL, and Redis.
+A production-ready MVP for analyzing EVM tokens to detect fraud and scam risk using a **context-aware adversarial risk scoring model**. Built with React, FastAPI, PostgreSQL, and Redis.
 
-## Architecture
+## 🎯 What It Does
 
-- **Web App**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
+Coin Clarity analyzes crypto tokens and provides:
+- **Malicious Rug Risk (MRR)**: Probability of theft/blocking/trapping funds
+- **Structural Centralization Risk (SCR)**: Power concentration, admin controls
+- **Market Fragility Risk (MFR)**: Liquidity, volatility, manipulability
+- **Uncertainty Factor (UF)**: Missing/immature data
+- **Confidence Score**: Data quality indicator
+
+Unlike simple "red flag" systems, Coin Clarity uses **context-aware analysis** that separates centralization from actual rug risk (e.g., WBTC has mint capability but it's custodian-controlled, not a scam).
+
+## 🏗️ Architecture
+
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
 - **API**: FastAPI (Python) + Uvicorn
 - **Worker**: Python RQ worker for async analysis jobs
 - **Database**: PostgreSQL (via SQLModel)
 - **Cache/Queue**: Redis with RQ
 
-## Features
-
-- **Contract Analysis**: Detects proxy contracts, verification status, and risky privilege functions
-- **Liquidity Analysis**: Analyzes token liquidity, FDV, and trading volume via DexScreener
-- **Holder Analysis**: Computes concentration metrics (requires explorer API keys)
-- **Risk Scoring**: Rule-based scoring system (0-100) with tier classification
-- **Caching**: Redis-based caching with configurable TTL
-- **Async Processing**: Background job queue for analysis tasks
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- (Optional) Explorer API keys for enhanced analysis
+- **Docker Desktop** installed and running ([Download here](https://www.docker.com/products/docker-desktop/))
+- (Optional) **Etherscan/Basescan API keys** for enhanced analysis
 
-### Setup
+### Running Locally
 
-1. **Clone and navigate to the project**:
-   ```bash
-   cd Hack_NCState_Spring_2026
-   ```
-
-2. **Copy environment file**:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Edit `.env`** (optional):
-   - Add `ETHERSCAN_API_KEY` and `BASESCAN_API_KEY` for better analysis
-   - Adjust RPC URLs if needed
-   - Other defaults work out of the box
-
-4. **Start all services**:
-   ```bash
-   docker compose -f infra/docker-compose.yml up --build
-   ```
-
-5. **Access the application**:
-   - Web App: http://localhost:3000
-   - API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
-
-### Using Make (Alternative)
-
-If you prefer Make commands:
+#### Step 1: Clone the Repository
 
 ```bash
-# Start all services
-make up
-
-# Stop all services
-make down
-
-# View logs
-make logs
-
-# Rebuild and restart
-make restart
+git clone https://github.com/shlbi/Coin-Clarity.git
+cd Coin-Clarity
 ```
 
-## Project Structure
+#### Step 2: Create Environment File (Optional)
+
+Create a `.env` file in the project root:
+
+```bash
+# Etherscan API Key (for Ethereum mainnet)
+# Get one free at: https://etherscan.io/apis
+ETHERSCAN_API_KEY=your_key_here
+
+# Basescan API Key (for Base chain)
+# Get one free at: https://basescan.org/apis
+BASESCAN_API_KEY=your_key_here
+```
+
+**Note**: The app works without API keys, but confidence scores will be lower (~60% vs ~85-100% with keys).
+
+#### Step 3: Start Backend Services
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+```
+
+This starts:
+- ✅ PostgreSQL (port 5432)
+- ✅ Redis (port 6379)
+- ✅ FastAPI Backend (port 8000)
+- ✅ Worker (background analysis jobs)
+
+**Wait for**: "Application startup complete" messages (30-60 seconds)
+
+#### Step 4: Start Frontend (New Terminal)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+This starts the React frontend on **http://localhost:5173**
+
+#### Step 5: Access the Application
+
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+
+### Try It Out
+
+1. Open http://localhost:5173 in your browser
+2. Click on any token in the dashboard, or navigate to a token report
+3. The system will automatically analyze the token and show:
+   - Risk Score (0-100)
+   - MRR, SCR, MFR breakdown
+   - Confidence score
+   - Detailed signals and evidence
+
+**Test Tokens**:
+- **WBTC**: `0x2260fac5e5542a773aa44fbcfedf7c193bc2c599` (Low risk, custodian-controlled)
+- **UNI**: `0x1f9840a85d5af5bf1d1762f925bdaddc4201f984` (Low risk)
+- **USDC**: `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` (Low risk)
+
+## 📁 Project Structure
 
 ```
 .
 ├── apps/
-│   ├── web/              # Next.js web application
 │   ├── api/              # FastAPI backend
-│   └── worker/           # RQ worker for async jobs
-├── packages/
-│   └── shared/           # Shared types and schemas
+│   │   ├── app/
+│   │   │   ├── routes/   # API endpoints
+│   │   │   └── services/
+│   │   │       ├── analyzers/  # Contract, liquidity, holder analysis
+│   │   │       └── scoring.py  # Risk scoring engine
+│   │   └── main.py
+│   └── worker/           # RQ worker
+├── frontend/             # React frontend
+│   ├── src/
+│   │   ├── app/         # Pages and components
+│   │   └── lib/         # API client
+│   └── package.json
 ├── infra/
-│   └── docker-compose.yml # Docker Compose configuration
-├── .env.example          # Environment variables template
+│   └── docker-compose.yml
 └── README.md
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### POST `/analyze`
 Analyze a token or return cached result.
 
-**Request Body**:
+**Request**:
 ```json
 {
   "chain": "ethereum" | "base",
@@ -107,44 +141,30 @@ Analyze a token or return cached result.
 ### GET `/report/{chain}/{address}`
 Get the latest analysis report for a token.
 
-**Response**: Analysis report object or 404 if not found.
+**Response**: Analysis report with MRR, SCR, MFR, UF, confidence, and signals.
 
 ### GET `/health`
-Health check endpoint for monitoring.
+Health check endpoint.
 
-## Analysis Pipeline
+## 🧠 How the Scoring Model Works
 
-1. **Contract Analyzer**:
-   - Fetches bytecode via JSON-RPC
-   - Detects proxy contracts (DELEGATECALL heuristic)
-   - Checks verification status via explorer API
-   - Scans for risky function selectors (mint, blacklist, pause, etc.)
+The system uses a **7-step context-aware adversarial model**:
 
-2. **Liquidity Analyzer**:
-   - Calls DexScreener public API
-   - Extracts liquidity, FDV, volume
-   - Flags low liquidity (<$25k) and suspicious ratios
+1. **Capability Graph**: Detects what the contract CAN do (mint, blacklist, pause, etc.)
+2. **Authority Context**: Classifies WHO controls each capability (renounced, multisig, single EOA, etc.)
+3. **Liquidity Attack Surface**: Analyzes liquidity depth, multi-pool presence, removability
+4. **Holder Concentration**: Computes top 1/top 10 concentration (affects MFR, not MRR)
+5. **Historical Stability**: Age-based modifiers (older tokens = lower rug probability)
+6. **Market Legitimacy**: High liquidity/multi-pool presence dampens MRR
+7. **Uncertainty Factor**: Tracks missing data (unverified source, no holder data, etc.)
 
-3. **Holder Analyzer**:
-   - Fetches top holders via explorer API (if key provided)
-   - Computes top 1 and top 10 concentration
+**Key Principle**: Never mix centralization directly into rug risk. WBTC has mint capability, but it's custodian-controlled → SCR increases, MRR stays low.
 
-4. **Scoring Engine**:
-   - Rule-based weights produce 0-100 risk score
-   - Tiers: Extreme (≥80), High (60-79), Medium (35-59), Low (<35)
-   - Generates 3-8 signals with severity and evidence links
+## 🛠️ Development
 
-## Caching
+### Running Without Docker
 
-- Reports cached in Redis with 6-hour TTL (configurable)
-- Database stores all reports for history
-- Stale reports trigger background re-analysis
-
-## Development
-
-### Running Locally (without Docker)
-
-**API**:
+**Backend API**:
 ```bash
 cd apps/api
 python -m venv venv
@@ -155,44 +175,77 @@ uvicorn main:app --reload
 
 **Worker**:
 ```bash
-cd apps/worker
-# Use same venv as API
+cd apps/api
+source venv/bin/activate
 rq worker --url redis://localhost:6379 analysis
 ```
 
-**Web**:
+**Frontend**:
 ```bash
-cd apps/web
+cd frontend
 npm install
 npm run dev
 ```
 
-**Database & Redis**:
+**Database & Redis** (use Docker for these):
 ```bash
-# Use Docker Compose for just these services
 docker compose -f infra/docker-compose.yml up postgres redis
 ```
 
-## Environment Variables
+## 🔧 Environment Variables
 
-See `.env.example` for all available variables. Key ones:
+Key environment variables (set in `.env` or `docker-compose.yml`):
 
-- `ETH_RPC_URL`, `BASE_RPC_URL`: JSON-RPC endpoints
-- `ETHERSCAN_API_KEY`, `BASESCAN_API_KEY`: Explorer API keys (optional)
-- `CACHE_TTL_SECONDS`: Cache expiration (default: 21600 = 6 hours)
+- `ETH_RPC_URL`: Ethereum JSON-RPC endpoint (default: public RPC)
+- `BASE_RPC_URL`: Base JSON-RPC endpoint (default: public RPC)
+- `ETHERSCAN_API_KEY`: Etherscan API key (optional, improves analysis)
+- `BASESCAN_API_KEY`: Basescan API key (optional, improves analysis)
 - `DATABASE_URL`: PostgreSQL connection string
 - `REDIS_HOST`, `REDIS_PORT`: Redis connection
+- `CACHE_TTL_SECONDS`: Cache expiration (default: 21600 = 6 hours)
+- `CORS_ORIGINS`: Allowed CORS origins (comma-separated)
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
-**Port conflicts**: Change ports in `docker-compose.yml` if 3000, 8000, 5432, or 6379 are in use.
+### Docker not found
+- Install Docker Desktop: https://www.docker.com/products/docker-desktop/
+- Make sure Docker Desktop is **running** (check system tray)
 
-**Worker not processing**: Check Redis connection and ensure worker container is running.
+### Port conflicts
+Change ports in `infra/docker-compose.yml` if these are in use:
+- **5173**: Frontend (Vite dev server)
+- **8000**: API
+- **5432**: PostgreSQL
+- **6379**: Redis
 
-**Missing data**: Some features require explorer API keys. Add them to `.env` for complete analysis.
+### Frontend can't connect to API
+- Check API is running: http://localhost:8000/health
+- Check CORS settings in `infra/docker-compose.yml` includes `http://localhost:5173`
+- Restart both frontend and API
 
-**Database errors**: Ensure PostgreSQL container is healthy before starting API/worker.
+### Worker not processing jobs
+- Check Redis is running: `docker compose -f infra/docker-compose.yml ps`
+- Check worker logs: `docker compose -f infra/docker-compose.yml logs worker`
+- Ensure worker container is running
 
-## License
+### Database errors
+- Wait for PostgreSQL to be healthy (check docker logs)
+- Services have health checks and wait for dependencies
+- If needed, run migration: `docker compose -f infra/docker-compose.yml exec api python migrate_db.py`
+
+### Low confidence scores
+- Add Etherscan/Basescan API keys to `.env` file
+- Restart API and worker: `docker compose -f infra/docker-compose.yml restart api worker`
+
+## 🛑 Stopping Services
+
+**Docker services**:
+```bash
+docker compose -f infra/docker-compose.yml down
+```
+
+**Frontend**: Press `Ctrl+C` in the terminal
+
+## 📝 License
 
 MIT
